@@ -14,28 +14,6 @@ Radial pixel distribution and stroke density around grid centers (pulli).
 Unsupervised Clustering: Uses PCA for variance driver identification and t-SNE for 2D/3D cluster mapping of pattern families.
 
 Interactive Operations Dashboard: Built with Streamlit/Dash featuring a dark slate (#1E293B) and terracotta (#E07A5F) palette, allowing judges and researchers to explore scatter plots and inspect feature vectors in real time.
-# Project Architecture 
-kolam-geometry-analysis/
-├── data/
-
-│   ├── raw_images/          # Input Kolam dataset
-
-│   └── processed_masks/     # Binarized & segmented masks
-
-├── src/
-
-│   ├── preprocessing.py     # Grayscale, thresholding, & contour extraction
-
-│   ├── feature_extractor.py # Geometric symmetry & topology vector generation
-
-│   ├── clustering.py        # PCA & t-SNE dimensionality reduction
-
-│   └── dashboard.py         # Streamlit web application
-
-├── requirements.txt         # Project dependencies
-
-└── README.md
-
 # Tech Stack
 Language: Python 3.10+
 
