@@ -17,15 +17,25 @@ Interactive Operations Dashboard: Built with Streamlit/Dash featuring a dark sla
 # Project Architecture 
 kolam-geometry-analysis/
 ├── data/
+
 │   ├── raw_images/          # Input Kolam dataset
+
 │   └── processed_masks/     # Binarized & segmented masks
+
 ├── src/
+
 │   ├── preprocessing.py     # Grayscale, thresholding, & contour extraction
+
 │   ├── feature_extractor.py # Geometric symmetry & topology vector generation
+
 │   ├── clustering.py        # PCA & t-SNE dimensionality reduction
+
 │   └── dashboard.py         # Streamlit web application
+
 ├── requirements.txt         # Project dependencies
+
 └── README.md
+
 # Tech Stack
 Language: Python 3.10+
 
