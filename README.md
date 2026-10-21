@@ -5,11 +5,11 @@ Image Preprocessing & Binarization: Automatically converts raw Kolam photographs
 
 Geometric Feature Extraction: Quantifies key structural properties:
 
-Rotational and bilateral symmetry indices (via IoU matrix transformations).
+-Rotational and bilateral symmetry indices (via IoU matrix transformations).
 
-Topological descriptors (Euler number, loop counts, contour aspect ratios, Hu moments).
+-Topological descriptors (Euler number, loop counts, contour aspect ratios, Hu moments).
 
-Radial pixel distribution and stroke density around grid centers (pulli).
+-Radial pixel distribution and stroke density around grid centers (pulli).
 
 Unsupervised Clustering: Uses PCA for variance driver identification and t-SNE for 2D/3D cluster mapping of pattern families.
 
