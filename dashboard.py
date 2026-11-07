@@ -3,8 +3,8 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from clustering import KolamClusterEngine
-from feature_extractor import KolamFeatureExtractor
+from src.clustering import KolamClusterEngine
+from src.feature_extractor import KolamFeatureExtractor
 
 # Page configuration
 st.set_page_config(
