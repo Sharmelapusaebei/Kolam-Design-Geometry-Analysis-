@@ -32,6 +32,7 @@ st.set_page_config(
     page_title="Kolam Design Geometry Workbench",
     page_icon="🕸️",
     layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
 st.markdown(
@@ -41,8 +42,11 @@ st.markdown(
         background-color: #1E293B;
         color: #F8FAFC;
     }
-    .stSidebar {
-        background-color: #0F172A !important;
+    [data-testid="stSidebar"] {
+        display: none;
+    }
+    [data-testid="collapsedControl"] {
+        display: none;
     }
     h1, h2, h3 {
         color: #E07A5F !important;
@@ -111,18 +115,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("🕸️ Kolam Design Geometry Analysis")
-st.markdown(
-    "Unsupervised Machine Learning Workbench for Two-Family Structural Pattern Discovery"
-)
-
-# Sidebar controls (locked to 2 pattern families)
-st.sidebar.header("Projection Settings")
-projection_method = st.sidebar.radio(
-    "Dimensionality Reduction Method", ["t-SNE", "PCA"]
-)
-st.sidebar.info("Classification Mode: **2 Structural Families** (Family 1 & Family 2)")
-
 
 @st.cache_data
 def generate_two_family_dataset(n_per_family=25):
@@ -172,7 +164,6 @@ def render_archetype_preview(family_name, size=180):
     cx, cy = size // 2, size // 2
 
     if family_name == "Family 1":
-        # Multi-loop symmetric weave pattern (Terracotta accent)
         color = np.array([224, 122, 95], dtype=np.uint8)
         for dx in [-42, 0, 42]:
             for dy in [-42, 0, 42]:
@@ -183,7 +174,6 @@ def render_archetype_preview(family_name, size=180):
         outer = np.abs(np.abs(x - cx) + np.abs(y - cy) - 72) <= 2
         canvas[outer] = color
     else:
-        # Denser radial geometric motif (Sage accent)
         color = np.array([129, 178, 154], dtype=np.uint8)
         dist = np.hypot(x - cx, y - cy)
         angle = np.arctan2(y - cy, x - cx)
@@ -335,6 +325,21 @@ def build_markdown_summary(summaries, method_name, metrics):
     return "\n".join(lines)
 
 
+# Top Header + Inline Projection Selector (frees full width of screen)
+head_left, head_right = st.columns([3, 1.3])
+with head_left:
+    st.title("🕸️ Kolam Design Geometry Analysis")
+    st.markdown(
+        "Unsupervised Machine Learning Workbench for Two-Family Structural Pattern Discovery"
+    )
+with head_right:
+    projection_method = st.radio(
+        "Projection Method",
+        ["t-SNE", "PCA"],
+        horizontal=True,
+    )
+    st.caption("Mode: **2 Families** (Family 1 & Family 2)")
+
 df_corpus = generate_two_family_dataset(n_per_family=25)
 x_col = "tsne_x" if projection_method == "t-SNE" else "pca_x"
 y_col = "tsne_y" if projection_method == "t-SNE" else "pca_y"
@@ -359,7 +364,6 @@ tab_home, tab_map, tab_upload, tab_sim, tab_user = st.tabs(
 
 # TAB 1: Home (Visual-First Overview, Two-Family Comparison & Image Membership)
 with tab_home:
-    # 1. Hero Hook + KPI Strip
     st.markdown(
         """
         <div class="hero-banner">
@@ -390,7 +394,6 @@ with tab_home:
 
     st.markdown("---")
 
-    # 2. Side-by-Side Family 1 vs. Family 2 Visual Archetype Cards
     st.subheader("Family 1 vs. Family 2: What Each Design Family Represents")
     arch_cols = st.columns(2)
     for idx, item in enumerate(archetypes):
@@ -428,7 +431,6 @@ with tab_home:
 
     st.markdown("---")
 
-    # 3. How the System Identifies Which Image Belongs to Which Family
     st.subheader("How the System Identifies Family 1 vs. Family 2")
     s1, s2, s3, s4 = st.columns(4)
     with s1:
@@ -482,7 +484,6 @@ with tab_home:
 
     st.markdown("---")
 
-    # 4. Visual Feature Comparison + "Which Images Belong Where?" Explorer
     comp_col, mem_col = st.columns([1.1, 1.3])
 
     with comp_col:
