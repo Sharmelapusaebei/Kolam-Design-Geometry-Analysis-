@@ -1,46 +1,48 @@
 import cv2
 import numpy as np
-import pandas as pd
 
 
 class KolamFeatureExtractor:
     """Extracts geometric symmetry, topological, and shape features
-
     from binarized Kolam pattern images.
     """
 
     def __init__(self, image_size=(256, 256)):
         self.image_size = image_size
 
-    def preprocess_image(self, image_path):
-        """Loads image, converts to grayscale, and applies Otsu thresholding."""
-        img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-        if img is None:
-            raise FileNotFoundError(f"Image not found at {image_path}")
-
-        img_resized = cv2.resize(img, self.image_size)
-
-        # Binarize image (isolating white strokes on dark background)
+    def _binarize_resized(self, gray_img):
+        """Resizes grayscale image and applies Otsu thresholding."""
+        img_resized = cv2.resize(gray_img, self.image_size)
         _, binary = cv2.threshold(
             img_resized, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
         )
         return binary
 
+    def preprocess_image(self, image_path):
+        """Loads image from disk, converts to grayscale, and applies Otsu thresholding."""
+        img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+        if img is None:
+            raise FileNotFoundError(f"Image not found at {image_path}")
+        return self._binarize_resized(img)
+
+    def preprocess_bytes(self, file_bytes):
+        """Decodes uploaded image bytes to grayscale and applies Otsu thresholding."""
+        arr = np.frombuffer(file_bytes, dtype=np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_GRAYSCALE)
+        if img is None:
+            raise ValueError("Could not decode uploaded image bytes.")
+        return self._binarize_resized(img)
+
     def calculate_symmetry(self, binary_img):
         """Computes bilateral (vertical/horizontal) and 90-degree rotational symmetry
-
         using Intersection over Union (IoU).
         """
         norm_img = binary_img / 255.0
 
-        # Horizontal & Vertical flips
         h_flip = np.fliplr(norm_img)
         v_flip = np.flipud(norm_img)
-
-        # Rotations
         rot_90 = np.rot90(norm_img)
 
-        # IoU metrics
         v_sym = np.sum(norm_img * h_flip) / (
             np.sum(np.logical_or(norm_img, h_flip)) + 1e-6
         )
@@ -58,7 +60,7 @@ class KolamFeatureExtractor:
         }
 
     def extract_topological_features(self, binary_img):
-        """Extracts contour counts, bounding box metrics, and Hu Moments."""
+        """Extracts contour counts, stroke density, and log-scaled Hu Moments."""
         contours, _ = cv2.findContours(
             binary_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
         )
@@ -66,7 +68,6 @@ class KolamFeatureExtractor:
         loop_count = len(contours)
         stroke_density = float(np.sum(binary_img / 255.0) / binary_img.size)
 
-        # Hu Moments (invariant to scale, rotation, and translation)
         moments = cv2.moments(binary_img)
         hu_moments = cv2.HuMoments(moments).flatten()
         log_hu = -np.sign(hu_moments) * np.log10(np.abs(hu_moments) + 1e-10)
@@ -76,20 +77,25 @@ class KolamFeatureExtractor:
             "stroke_density": stroke_density,
         }
 
-        # Add 7 Hu moments to feature dictionary
         for i, hu in enumerate(log_hu):
             features[f"hu_moment_{i+1}"] = float(hu)
 
         return features
 
-    def extract_all(self, image_path):
-        """Combines all feature sets into a single dictionary."""
-        binary = self.preprocess_image(image_path)
+    def _extract_from_binary(self, binary):
         symmetry_feats = self.calculate_symmetry(binary)
         topo_feats = self.extract_topological_features(binary)
+        return {**symmetry_feats, **topo_feats}
 
-        combined = {**symmetry_feats, **topo_feats}
-        return combined
+    def extract_all(self, image_path):
+        """Combines all feature sets from an image file path."""
+        binary = self.preprocess_image(image_path)
+        return self._extract_from_binary(binary)
+
+    def extract_from_bytes(self, file_bytes):
+        """Combines all feature sets directly from uploaded image bytes."""
+        binary = self.preprocess_bytes(file_bytes)
+        return self._extract_from_binary(binary)
 
 
 if __name__ == "__main__":
