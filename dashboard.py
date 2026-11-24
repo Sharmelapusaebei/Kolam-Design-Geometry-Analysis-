@@ -57,13 +57,54 @@ st.markdown(
         background-color: #F28F3B;
         color: white;
     }
-    .archetype-card {
+    .hero-banner {
+        background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+        border: 1px solid #334155;
+        border-left: 5px solid #E07A5F;
+        border-radius: 12px;
+        padding: 18px 22px;
+        margin-bottom: 18px;
+    }
+    .family-card-1 {
         background-color: #0F172A;
         border: 1px solid #334155;
-        border-left: 4px solid #E07A5F;
-        border-radius: 10px;
+        border-top: 4px solid #E07A5F;
+        border-radius: 12px;
         padding: 16px 18px;
         margin-bottom: 12px;
+    }
+    .family-card-2 {
+        background-color: #0F172A;
+        border: 1px solid #334155;
+        border-top: 4px solid #81B29A;
+        border-radius: 12px;
+        padding: 16px 18px;
+        margin-bottom: 12px;
+    }
+    .step-card {
+        background-color: #0F172A;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        padding: 14px 16px;
+        height: 100%;
+    }
+    .badge-f1 {
+        background-color: rgba(224, 122, 95, 0.2);
+        color: #E07A5F;
+        border: 1px solid #E07A5F;
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .badge-f2 {
+        background-color: rgba(129, 178, 154, 0.2);
+        color: #81B29A;
+        border: 1px solid #81B29A;
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
     }
     </style>
     """,
@@ -89,7 +130,7 @@ def generate_two_family_dataset(n_per_family=25):
     rng = np.random.default_rng(42)
     rows = []
 
-    # Family 1: Higher loop complexity & finer/sparser stroke coverage
+    # Family 1: High-symmetry, multi-loop sikku-style weave designs
     for i in range(n_per_family):
         rows.append(
             {
@@ -105,7 +146,7 @@ def generate_two_family_dataset(n_per_family=25):
             }
         )
 
-    # Family 2: Simpler loop structure & denser stroke coverage
+    # Family 2: Denser stroke, lower-loop pulli/geometric motif designs
     for j in range(n_per_family):
         rows.append(
             {
@@ -122,6 +163,36 @@ def generate_two_family_dataset(n_per_family=25):
         )
 
     return pd.DataFrame(rows)
+
+
+def render_archetype_preview(family_name, size=180):
+    """Generates a visual preview thumbnail representing each structural family's geometry."""
+    canvas = np.full((size, size, 3), [15, 23, 42], dtype=np.uint8)
+    y, x = np.ogrid[:size, :size]
+    cx, cy = size // 2, size // 2
+
+    if family_name == "Family 1":
+        # Multi-loop symmetric weave pattern (Terracotta accent)
+        color = np.array([224, 122, 95], dtype=np.uint8)
+        for dx in [-42, 0, 42]:
+            for dy in [-42, 0, 42]:
+                dist = np.hypot(x - (cx + dx), y - (cy + dy))
+                ring = (dist >= 16) & (dist <= 20)
+                dot = dist <= 3
+                canvas[ring | dot] = color
+        outer = np.abs(np.abs(x - cx) + np.abs(y - cy) - 72) <= 2
+        canvas[outer] = color
+    else:
+        # Denser radial geometric motif (Sage accent)
+        color = np.array([129, 178, 154], dtype=np.uint8)
+        dist = np.hypot(x - cx, y - cy)
+        angle = np.arctan2(y - cy, x - cx)
+        petal = np.abs(dist - (46 + 18 * np.cos(4 * angle))) <= 4
+        inner = (dist >= 14) & (dist <= 22)
+        core = dist <= 6
+        canvas[petal | inner | core] = color
+
+    return canvas
 
 
 def normalize_family_labels(df_in):
@@ -167,11 +238,11 @@ def build_archetype_summaries(df, x_col, y_col):
 
         traits = []
         if diffs.get("loop_count", 0) > 0.08:
-            traits.append(f"Higher loop/contour count (~{group_means['loop_count']:.1f})")
+            traits.append(f"Higher loop/contour count (~{group_means['loop_count']:.1f} loops)")
         elif diffs.get("loop_count", 0) < -0.08:
-            traits.append(f"Lower loop/contour count (~{group_means['loop_count']:.1f})")
+            traits.append(f"Lower loop/contour count (~{group_means['loop_count']:.1f} loops)")
         else:
-            traits.append(f"Moderate loop/contour count (~{group_means['loop_count']:.1f})")
+            traits.append(f"Moderate loop/contour count (~{group_means['loop_count']:.1f} loops)")
 
         sym_avg = float(
             np.mean(
@@ -197,12 +268,16 @@ def build_archetype_summaries(df, x_col, y_col):
                 "count": len(group),
                 "medoid": medoid_row["image_name"],
                 "traits": traits,
+                "means": group_means,
+                "members": group["image_name"].tolist(),
             }
         )
     return summaries
 
 
-def build_projection_figure(corpus_df, x_col, y_col, method_name, highlight_row=None, highlight_label="Query"):
+def build_projection_figure(
+    corpus_df, x_col, y_col, method_name, highlight_row=None, highlight_label="Query"
+):
     fig = px.scatter(
         corpus_df,
         x=x_col,
@@ -272,9 +347,9 @@ archetypes = build_archetype_summaries(base_results, x_col, y_col)
 base_fig = build_projection_figure(base_results, x_col, y_col, projection_method)
 
 # 5 Tabs
-tab_overview, tab_map, tab_upload, tab_sim, tab_user = st.tabs(
+tab_home, tab_map, tab_upload, tab_sim, tab_user = st.tabs(
     [
-        "📊 Overview & Archetypes",
+        "🏠 Home",
         "🗺️ Cluster Map",
         "📤 Upload & Classify Family",
         "⚡ Live Simulation",
@@ -282,8 +357,23 @@ tab_overview, tab_map, tab_upload, tab_sim, tab_user = st.tabs(
     ]
 )
 
-# TAB 1: Overview & Archetypes
-with tab_overview:
+# TAB 1: Home (Visual-First Overview, Two-Family Comparison & Image Membership)
+with tab_home:
+    # 1. Hero Hook + KPI Strip
+    st.markdown(
+        """
+        <div class="hero-banner">
+            <h3 style="margin-top:0; margin-bottom:6px;">Discovering Structural DNA in Traditional Kolam Art</h3>
+            <p style="margin-bottom:0; color:#CBD5E1;">
+                Instead of treating Kolam designs as flat pixels or relying on manual labels, this workbench extracts
+                geometric symmetry, enclosed loop topology, stroke density, and Hu shape moments to separate patterns
+                into <strong>2 distinct structural families</strong> (<strong>Family 1</strong> and <strong>Family 2</strong>).
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("Corpus Size", f"{len(base_results)} patterns")
     m2.metric("Design Families", "2 Families")
@@ -298,40 +388,180 @@ with tab_overview:
         else "N/A",
     )
 
-    st.subheader("Two Structural Family Archetypes")
+    st.markdown("---")
+
+    # 2. Side-by-Side Family 1 vs. Family 2 Visual Archetype Cards
+    st.subheader("Family 1 vs. Family 2: What Each Design Family Represents")
     arch_cols = st.columns(2)
     for idx, item in enumerate(archetypes):
+        fam = item["family"]
+        card_class = "family-card-1" if fam == "Family 1" else "family-card-2"
+        badge_class = "badge-f1" if fam == "Family 1" else "badge-f2"
+        subtitle = (
+            "Multi-Loop & High-Symmetry Weave Designs"
+            if fam == "Family 1"
+            else "Dense-Stroke & Compact Geometric Motifs"
+        )
+        traits_html = "".join(f"<li>{t}</li>" for t in item["traits"])
+
         with arch_cols[idx % 2]:
-            traits_html = "".join(f"<li>{t}</li>" for t in item["traits"])
-            st.markdown(
-                f"""
-                <div class="archetype-card">
-                    <strong>{item['family']}</strong> &nbsp;·&nbsp; <span>{item['count']} patterns</span><br/>
-                    <small>Medoid: <code>{item['medoid']}</code></small>
-                    <ul style="margin-top:8px; margin-bottom:0; padding-left:18px;">
+            st.markdown(f'<div class="{card_class}">', unsafe_allow_html=True)
+            img_col, desc_col = st.columns([1, 2])
+            with img_col:
+                st.image(
+                    render_archetype_preview(fam),
+                    caption=f"Medoid: {item['medoid']}",
+                    use_container_width=True,
+                )
+            with desc_col:
+                st.markdown(
+                    f"""
+                    <span class="{badge_class}">{fam} · {item['count']} patterns</span>
+                    <h4 style="margin-top:8px; margin-bottom:6px; color:#F8FAFC;">{subtitle}</h4>
+                    <ul style="margin-top:4px; margin-bottom:0; padding-left:18px; color:#CBD5E1;">
                         {traits_html}
                     </ul>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+                    """,
+                    unsafe_allow_html=True,
+                )
+            st.markdown("</div>", unsafe_allow_html=True)
 
-    st.subheader("Extracted Feature Table")
-    st.dataframe(
-        base_results[
-            [
-                "image_name",
-                "family",
-                "loop_count",
-                "stroke_density",
-                "vertical_symmetry",
-                "horizontal_symmetry",
-                "rotational_symmetry_90",
-            ]
-        ],
-        hide_index=True,
-        use_container_width=True,
-    )
+    st.markdown("---")
+
+    # 3. How the System Identifies Which Image Belongs to Which Family
+    st.subheader("How the System Identifies Family 1 vs. Family 2")
+    s1, s2, s3, s4 = st.columns(4)
+    with s1:
+        st.markdown(
+            """
+            <div class="step-card">
+                <strong>Step 1 · Binarization</strong><br/>
+                <small style="color:#CBD5E1;">
+                Converts every Kolam image to grayscale, resizes to 256×256, and isolates foreground strokes via Otsu thresholding.
+                </small>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with s2:
+        st.markdown(
+            """
+            <div class="step-card">
+                <strong>Step 2 · Geometry Vector</strong><br/>
+                <small style="color:#CBD5E1;">
+                Measures vertical, horizontal, and 90° rotational symmetry (IoU), contour loop count, stroke density, and Hu moments.
+                </small>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with s3:
+        st.markdown(
+            """
+            <div class="step-card">
+                <strong>Step 3 · Z-Score & Manifold</strong><br/>
+                <small style="color:#CBD5E1;">
+                Standardizes all features equally and projects them via PCA (linear) and t-SNE (non-linear) to reveal natural separation.
+                </small>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with s4:
+        st.markdown(
+            """
+            <div class="step-card">
+                <strong>Step 4 · 2-Family Assignment</strong><br/>
+                <small style="color:#CBD5E1;">
+                Groups patterns into <strong>Family 1</strong> or <strong>Family 2</strong> based on structural similarity—no manual labels required.
+                </small>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("---")
+
+    # 4. Visual Feature Comparison + "Which Images Belong Where?" Explorer
+    comp_col, mem_col = st.columns([1.1, 1.3])
+
+    with comp_col:
+        st.subheader("Feature Drivers Separating the Two Families")
+        if len(archetypes) == 2:
+            f1_means = archetypes[0]["means"]
+            f2_means = archetypes[1]["means"]
+            comp_df = pd.DataFrame(
+                {
+                    "Feature": [
+                        "Vertical Symmetry",
+                        "Horizontal Symmetry",
+                        "90° Rotational Symmetry",
+                        "Stroke Density",
+                        "Normalized Loop Count",
+                    ],
+                    "Family 1": [
+                        f1_means["vertical_symmetry"],
+                        f1_means["horizontal_symmetry"],
+                        f1_means["rotational_symmetry_90"],
+                        f1_means["stroke_density"],
+                        f1_means["loop_count"] / 20.0,
+                    ],
+                    "Family 2": [
+                        f2_means["vertical_symmetry"],
+                        f2_means["horizontal_symmetry"],
+                        f2_means["rotational_symmetry_90"],
+                        f2_means["stroke_density"],
+                        f2_means["loop_count"] / 20.0,
+                    ],
+                }
+            )
+            comp_long = comp_df.melt(
+                id_vars="Feature", var_name="Family", value_name="Score"
+            )
+            bar_fig = px.bar(
+                comp_long,
+                x="Score",
+                y="Feature",
+                color="Family",
+                barmode="group",
+                orientation="h",
+                color_discrete_map={"Family 1": "#E07A5F", "Family 2": "#81B29A"},
+            )
+            bar_fig.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="#0F172A",
+                font_color="#F8FAFC",
+                height=340,
+                margin=dict(l=10, r=10, t=20, b=10),
+            )
+            st.plotly_chart(bar_fig, use_container_width=True)
+
+    with mem_col:
+        st.subheader("Which Images Belong to Which Family?")
+        family_filter = st.radio(
+            "Filter Corpus Images by Assigned Family",
+            ["All (50)", "Family 1", "Family 2"],
+            horizontal=True,
+        )
+        filtered_df = base_results.copy()
+        if family_filter != "All (50)":
+            filtered_df = filtered_df[filtered_df["family"] == family_filter]
+
+        st.dataframe(
+            filtered_df[
+                [
+                    "image_name",
+                    "family",
+                    "loop_count",
+                    "stroke_density",
+                    "vertical_symmetry",
+                    "rotational_symmetry_90",
+                ]
+            ],
+            hide_index=True,
+            use_container_width=True,
+            height=295,
+        )
 
 # TAB 2: Cluster & Projection Map
 with tab_map:
@@ -350,7 +580,7 @@ with tab_map:
 with tab_upload:
     st.subheader("Upload a Kolam Design to Identify Its Family")
     st.markdown(
-        "Upload a Kolam image to extract geometric and topological features and assign it to either **Family 1** or **Family 2**."
+        "Upload any Kolam image to extract geometric and topological features and determine whether it belongs to **Family 1** or **Family 2**."
     )
     uploaded_file = st.file_uploader(
         "Choose a Kolam image",
@@ -486,6 +716,6 @@ with tab_user:
         st.download_button(
             label="Download Projection Plot (HTML)",
             data=plot_html,
-            file_name=f"kolam_two_families_{projection_method.lower()}.html",
+            file_name=f"kolam_projection_{projection_method.lower()}.html",
             mime="text/html",
         )
