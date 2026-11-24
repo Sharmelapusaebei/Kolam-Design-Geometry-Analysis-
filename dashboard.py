@@ -8,8 +8,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from clustering import KolamClusterEngine
-from feature_extractor import KolamFeatureExtractor
+from src.clustering import KolamClusterEngine
+from src.feature_extractor import KolamFeatureExtractor
 
 FEATURE_COLS = [
     "vertical_symmetry",
