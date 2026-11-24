@@ -76,41 +76,35 @@ st.markdown(
         font-size: 1rem;
         margin-bottom: 8px;
     }
-    .rect-box-left {
+    .full-proj-box {
         background-color: #0F172A;
         border: 1px solid #334155;
         border-left: 4px solid #E07A5F;
         border-radius: 6px;
-        padding: 14px 18px;
-        min-height: 76px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+        padding: 14px 22px;
+        margin-top: 8px;
+        margin-bottom: 14px;
+        width: 100%;
     }
-    .rect-box-right {
-        background-color: #0F172A;
-        border: 1px solid #334155;
-        border-left: 4px solid #81B29A;
-        border-radius: 6px;
-        padding: 12px 18px;
-        min-height: 76px;
+    .full-proj-header {
         display: flex;
-        flex-direction: column;
-        justify-content: center;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
     }
     .rect-box-title {
-        font-size: 0.95rem;
+        font-size: 1rem;
         font-weight: 600;
         color: #E07A5F;
-        margin-bottom: 4px;
     }
     .rect-box-sub {
-        font-size: 0.85rem;
+        font-size: 0.88rem;
         color: #CBD5E1;
     }
     div[data-testid="stRadio"] > div[role="radiogroup"] {
         flex-direction: row !important;
-        gap: 24px !important;
+        gap: 28px !important;
         align-items: center !important;
     }
     .hero-banner {
@@ -400,37 +394,25 @@ tab_home, tab_map, tab_upload, tab_sim, tab_user = st.tabs(
 )
 
 with tab_home:
-    _, box_left_col, box_right_col, _ = st.columns([0.6, 1.4, 1.4, 0.6])
-
-    with box_left_col:
-        st.markdown(
-            """
-            <div class="rect-box-left">
-                <div class="rect-box-title">Projection Settings</div>
-                <div class="rect-box-sub">Two-Family Mode (Family 1 &amp; Family 2)</div>
+    st.markdown(
+        """
+        <div class="full-proj-box">
+            <div class="full-proj-header">
+                <div>
+                    <div class="rect-box-title">Projection Settings · Two-Family Mode (Family 1 &amp; Family 2)</div>
+                    <div class="rect-box-sub">Select dimensionality reduction method (t-SNE or PCA) for two-family structural discovery</div>
+                </div>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    with box_right_col:
-        st.markdown(
-            """
-            <div class="rect-box-right">
-                <div class="rect-box-title">Projection Method</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        projection_method = st.radio(
-            "Select Projection Method",
-            ["t-SNE", "PCA"],
-            horizontal=True,
-            label_visibility="collapsed",
-            key="home_projection_method",
-        )
-
-    st.markdown("<br/>", unsafe_allow_html=True)
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    projection_method = st.radio(
+        "Projection Method (t-SNE / PCA)",
+        ["t-SNE", "PCA"],
+        horizontal=True,
+        key="home_projection_method",
+    )
 
     x_col = "tsne_x" if projection_method == "t-SNE" else "pca_x"
     y_col = "tsne_y" if projection_method == "t-SNE" else "pca_y"
