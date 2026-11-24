@@ -76,7 +76,6 @@ st.markdown(
         font-size: 1rem;
         margin-bottom: 8px;
     }
-    /* Style the block container holding the projection radio as one full-width box */
     div[data-testid="stVerticalBlock"]:has(> div[data-testid="stRadio"]) {
         background-color: #0F172A;
         border: 1px solid #334155;
@@ -127,6 +126,22 @@ st.markdown(
         padding: 16px 18px;
         margin-bottom: 12px;
     }
+    .group-panel-1 {
+        background-color: #0F172A;
+        border: 1px solid #334155;
+        border-left: 4px solid #E07A5F;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-bottom: 14px;
+    }
+    .group-panel-2 {
+        background-color: #0F172A;
+        border: 1px solid #334155;
+        border-left: 4px solid #81B29A;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-bottom: 14px;
+    }
     .step-card {
         background-color: #0F172A;
         border: 1px solid #334155;
@@ -160,7 +175,7 @@ st.markdown(
 
 @st.cache_data
 def generate_two_family_dataset(n_per_family=25):
-    """Generates a balanced 2-family Kolam feature dataset (N = 50 by default)."""
+    """Generates a balanced 2-family Kolam feature dataset (N = 50, n = 25 per family)."""
     rng = np.random.default_rng(42)
     rows = []
 
@@ -195,6 +210,37 @@ def generate_two_family_dataset(n_per_family=25):
         )
 
     return pd.DataFrame(rows)
+
+
+def render_pattern_thumbnail(image_name, family_name, index, size=110):
+    """Loads a local Kolam image if present, or synthesizes a distinct visual pattern thumbnail."""
+    for folder in ("data", "images", "dataset", "kolam_images", "."):
+        candidate = os.path.join(CURRENT_DIR, folder, image_name)
+        if os.path.isfile(candidate):
+            return candidate
+
+    canvas = np.full((size, size, 3), [15, 23, 42], dtype=np.uint8)
+    y, x = np.ogrid[:size, :size]
+    cx, cy = size // 2, size // 2
+
+    if family_name == "Family 1":
+        color = np.array([224, 122, 95], dtype=np.uint8)
+        lobes = 4 + (index % 3)
+        r_base = 24 + (index % 4) * 3
+        dist = np.hypot(x - cx, y - cy)
+        ang = np.arctan2(y - cy, x - cx)
+        weave = np.abs(dist - (r_base + 8 * np.cos(lobes * ang))) <= 2.2
+        dots = (np.abs(x - cx) == 18) & (np.abs(y - cy) == 18)
+        canvas[weave | dots] = color
+    else:
+        color = np.array([129, 178, 154], dtype=np.uint8)
+        half = 18 + (index % 5) * 4
+        diamond = np.abs(np.abs(x - cx) + np.abs(y - cy) - half) <= 2.4
+        inner_ring = np.abs(np.hypot(x - cx, y - cy) - (10 + (index % 3) * 3)) <= 1.8
+        center_dot = np.hypot(x - cx, y - cy) <= 3.0
+        canvas[diamond | inner_ring | center_dot] = color
+
+    return canvas
 
 
 def render_archetype_preview(family_name, size=180):
@@ -342,6 +388,40 @@ def build_projection_figure(
         font_color="#F8FAFC",
     )
     return fig
+
+
+def build_pca_and_tsne_figures(corpus_df):
+    """Builds both PCA and t-SNE scatter figures side by side for comparative inspection."""
+    pca_fig = px.scatter(
+        corpus_df,
+        x="pca_x",
+        y="pca_y",
+        color="family",
+        hover_data=["image_name", "loop_count", "vertical_symmetry", "stroke_density"],
+        color_discrete_map={"Family 1": "#E07A5F", "Family 2": "#81B29A"},
+        title="PCA Linear Projection (PC1 vs. PC2)",
+    )
+    pca_fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="#0F172A",
+        font_color="#F8FAFC",
+    )
+
+    tsne_fig = px.scatter(
+        corpus_df,
+        x="tsne_x",
+        y="tsne_y",
+        color="family",
+        hover_data=["image_name", "loop_count", "vertical_symmetry", "stroke_density"],
+        color_discrete_map={"Family 1": "#E07A5F", "Family 2": "#81B29A"},
+        title="t-SNE Non-Linear Manifold Projection (Perplexity = 15)",
+    )
+    tsne_fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="#0F172A",
+        font_color="#F8FAFC",
+    )
+    return pca_fig, tsne_fig
 
 
 def build_markdown_summary(summaries, method_name, metrics):
@@ -628,17 +708,70 @@ _metrics = _engine.get_validation_metrics()
 _archetypes = build_archetype_summaries(_results, x_col, y_col)
 _fig = build_projection_figure(_results, x_col, y_col, active_projection)
 
+# TAB 2: All 50 Images in 2 Groups (25 per Family) at the Top, Followed by the Two Graphs
 with tab_map:
-    st.subheader(f"Two-Family Projection ({active_projection})")
-    st.plotly_chart(_fig, use_container_width=True)
+    st.subheader("Curated Corpus Gallery (N = 50 · n = 25 per Structural Family)")
+
+    fam1_df = _results[_results["family"] == "Family 1"].reset_index(drop=True)
+    fam2_df = _results[_results["family"] == "Family 2"].reset_index(drop=True)
+
+    st.markdown(
+        f"""
+        <div class="group-panel-1">
+            <span class="badge-f1">Group 1 · Family 1 ({len(fam1_df)} Images)</span>
+            <span style="margin-left:10px; color:#CBD5E1; font-size:0.9rem;">
+                First structural family patterns
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    cols_per_row = 5
+    for start in range(0, len(fam1_df), cols_per_row):
+        row_slice = fam1_df.iloc[start : start + cols_per_row]
+        grid_cols = st.columns(cols_per_row)
+        for offset, (_, item_row) in enumerate(row_slice.iterrows()):
+            with grid_cols[offset]:
+                st.image(
+                    render_pattern_thumbnail(
+                        item_row["image_name"], "Family 1", start + offset
+                    ),
+                    caption=item_row["image_name"],
+                    use_container_width=True,
+                )
+
+    st.markdown(
+        f"""
+        <div class="group-panel-2">
+            <span class="badge-f2">Group 2 · Family 2 ({len(fam2_df)} Images)</span>
+            <span style="margin-left:10px; color:#CBD5E1; font-size:0.9rem;">
+                Second structural family patterns
+            </span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    for start in range(0, len(fam2_df), cols_per_row):
+        row_slice = fam2_df.iloc[start : start + cols_per_row]
+        grid_cols = st.columns(cols_per_row)
+        for offset, (_, item_row) in enumerate(row_slice.iterrows()):
+            with grid_cols[offset]:
+                st.image(
+                    render_pattern_thumbnail(
+                        item_row["image_name"], "Family 2", start + offset
+                    ),
+                    caption=item_row["image_name"],
+                    use_container_width=True,
+                )
 
     st.markdown("---")
-    st.subheader("Symmetry Metrics Across Corpus Patterns")
-    st.line_chart(
-        _results.set_index("image_name")[
-            ["vertical_symmetry", "horizontal_symmetry", "rotational_symmetry_90"]
-        ]
-    )
+    st.subheader("PCA and t-SNE Two-Family Projection Graphs")
+    pca_fig, tsne_fig = build_pca_and_tsne_figures(_results)
+    g_col1, g_col2 = st.columns(2)
+    with g_col1:
+        st.plotly_chart(pca_fig, use_container_width=True)
+    with g_col2:
+        st.plotly_chart(tsne_fig, use_container_width=True)
 
 with tab_upload:
     st.subheader("Upload a Kolam Design to Identify Its Family")
