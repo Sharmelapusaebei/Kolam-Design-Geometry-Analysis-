@@ -76,7 +76,8 @@ st.markdown(
         font-size: 1rem;
         margin-bottom: 8px;
     }
-    .full-proj-box {
+    /* Style the block container holding the projection radio as one full-width box */
+    div[data-testid="stVerticalBlock"]:has(> div[data-testid="stRadio"]) {
         background-color: #0F172A;
         border: 1px solid #334155;
         border-left: 4px solid #E07A5F;
@@ -86,21 +87,16 @@ st.markdown(
         margin-bottom: 14px;
         width: 100%;
     }
-    .full-proj-header {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        align-items: center;
-        gap: 12px;
-    }
     .rect-box-title {
         font-size: 1rem;
         font-weight: 600;
         color: #E07A5F;
+        margin-bottom: 2px;
     }
     .rect-box-sub {
         font-size: 0.88rem;
         color: #CBD5E1;
+        margin-bottom: 8px;
     }
     div[data-testid="stRadio"] > div[role="radiogroup"] {
         flex-direction: row !important;
@@ -394,25 +390,22 @@ tab_home, tab_map, tab_upload, tab_sim, tab_user = st.tabs(
 )
 
 with tab_home:
-    st.markdown(
-        """
-        <div class="full-proj-box">
-            <div class="full-proj-header">
-                <div>
-                    <div class="rect-box-title">Projection Settings · Two-Family Mode (Family 1 &amp; Family 2)</div>
-                    <div class="rect-box-sub">Select dimensionality reduction method (t-SNE or PCA) for two-family structural discovery</div>
-                </div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    projection_method = st.radio(
-        "Projection Method (t-SNE / PCA)",
-        ["t-SNE", "PCA"],
-        horizontal=True,
-        key="home_projection_method",
-    )
+    proj_box = st.container()
+    with proj_box:
+        st.markdown(
+            """
+            <div class="rect-box-title">Projection Settings · Two-Family Mode (Family 1 &amp; Family 2)</div>
+            <div class="rect-box-sub">Select dimensionality reduction method (t-SNE or PCA) for two-family structural discovery</div>
+            """,
+            unsafe_allow_html=True,
+        )
+        projection_method = st.radio(
+            "Projection Method (t-SNE / PCA)",
+            ["t-SNE", "PCA"],
+            horizontal=True,
+            label_visibility="collapsed",
+            key="home_projection_method",
+        )
 
     x_col = "tsne_x" if projection_method == "t-SNE" else "pca_x"
     y_col = "tsne_y" if projection_method == "t-SNE" else "pca_y"
